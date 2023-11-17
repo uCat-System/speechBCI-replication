@@ -3,7 +3,7 @@ import numpy as np
 import scipy.io
 from scipy.ndimage import gaussian_filter1d
 
-import paths
+from tutorials import paths
 
 
 def meanResamples(trlConcat, nResamples):
