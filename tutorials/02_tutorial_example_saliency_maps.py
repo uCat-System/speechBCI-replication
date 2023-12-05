@@ -8,12 +8,13 @@ import tensorflow as tf
 from neuralDecoder.neuralSequenceDecoder import NeuralSequenceDecoder
 from tutorials import paths
 
+
 # Demo: saliency map analysis
 # This notebook provides an overview of the phonetic similarity analysis from Fig. 3, using the baseline RNN and eval
 # data provided on Dryad.
 
 
-class GradientGetter():
+class GradientGetter:
     '''Simple object for handling saliency map computation. Accepts inputs:
 
         rnnModel (NeuralSequenceDecoder object) - model to analyze
@@ -28,8 +29,8 @@ class GradientGetter():
         in performance but for demo purposes we've turned it off by default.
         '''
 
-    def __init__(self, rnnModel, rnnInputs, n_perturbations = 1, noise_level = 0):
-        self.rnnModel  = rnnModel
+    def __init__(self, rnnModel, rnnInputs, n_perturbations=1, noise_level=0):
+        self.rnnModel = rnnModel
         self.rnnInputs = rnnInputs
 
         assert n_perturbations >= 1, "N_perturbations must be >= 1"
@@ -37,9 +38,9 @@ class GradientGetter():
         # Set n_perturbations = 1, noise_level = 0 for vanilla saliency maps
         # Set n_perturbations = 20, noise_level = 0.1 for our results
 
-        self.n_perturbations = n_perturbations # SmoothGrad perturbations per timepoint
-        self.noise_level     = noise_level     # noise SD as fraction of data range (0.1-0.2 in SmoothGrad paper)
-        self.print_fraction  = 0.1  # print progress
+        self.n_perturbations = n_perturbations  # SmoothGrad perturbations per timepoint
+        self.noise_level = noise_level  # noise SD as fraction of data range (0.1-0.2 in SmoothGrad paper)
+        self.print_fraction = 0.1  # print progress
 
     def __call__(self):
         '''Heavy lifting done here. Step through the input neural data and calculate jacobians
@@ -51,26 +52,26 @@ class GradientGetter():
         '''
 
         timelen = self.rnnInputs.shape[0]
-        delta   = self.rnnModel.model.stack_kwargs['kernel_size']
-        stride  = self.rnnModel.model.stack_kwargs['strides']
+        delta = self.rnnModel.model.stack_kwargs['kernel_size']
+        stride = self.rnnModel.model.stack_kwargs['strides']
 
         noise_sd = self.noise_level * (np.percentile(self.rnnInputs, 98) - np.percentile(self.rnnInputs, 2))
 
         t = 0
         gradients = list()
         while t <= timelen - delta:
-            step_data  = self.rnnInputs[t:(t + delta), :]
+            step_data = self.rnnInputs[t:(t + delta), :]
 
             noise_grads = list()
             for i in range(self.n_perturbations):
                 noisy_data = step_data + tf.random.normal(step_data.shape, 0, noise_sd)
                 noise_grads.append(self.computeTimestepSaliency(noisy_data))
 
-            step_grads = tf.math.reduce_mean(tf.concat(noise_grads, axis = 0), axis = 0, keepdims = True)
+            step_grads = tf.math.reduce_mean(tf.concat(noise_grads, axis=0), axis=0, keepdims=True)
             gradients.append(step_grads)
             t += delta + stride
 
-            #if (timeline - delta) * self.print_fraction
+            # if (timeline - delta) * self.print_fraction
             print(t, '/', timelen - delta)
         return gradients
 
@@ -82,9 +83,9 @@ class GradientGetter():
 
         rnnStates = [self.rnnModel.model.initStates, None, None, None, None, None]
 
-        with tf.GradientTape(persistent = True) as g:
-            #x = data
-            x = tf.tile(rnnInput[tf.newaxis, :,:], [1, 1, 1])
+        with tf.GradientTape(persistent=True) as g:
+            # x = data
+            x = tf.tile(rnnInput[tf.newaxis, :, :], [1, 1, 1])
             x = tf.cast(x, tf.float32)
             g.watch(x)
 
@@ -94,13 +95,13 @@ class GradientGetter():
                 output, rnnStates = self.rnnModel.model(output, rnnStates, training=False, returnState=True)
 
             logitOut = tf.squeeze(output, 0)
-            y        = tf.cast(logitOut, tf.float32)
+            y = tf.cast(logitOut, tf.float32)
 
-        jacobian = g.batch_jacobian(y, x, experimental_use_pfor = False)
+        jacobian = g.batch_jacobian(y, x, experimental_use_pfor=False)
         return jacobian
 
 
-def getSimilarity(vectors, subtractMean = False, metric = 'similarity'):
+def getSimilarity(vectors, subtractMean=False, metric='similarity'):
     '''Inputs are:
 
         vectors (2D float)  - classes x feature matrix
@@ -112,11 +113,11 @@ def getSimilarity(vectors, subtractMean = False, metric = 'similarity'):
     '''
 
     if subtractMean:
-        vectors -= np.mean(vectors, axis = 0, keepdims = True)
+        vectors -= np.mean(vectors, axis=0, keepdims=True)
 
     if metric == 'similarity':
-        normed = vectors / np.linalg.norm(vectors, axis = 1)[:, None]
-        dists  = normed @ normed.T
+        normed = vectors / np.linalg.norm(vectors, axis=1)[:, None]
+        dists = normed @ normed.T
     else:
         dists = squareform(pdist(vecs, metric))
 
@@ -135,7 +136,7 @@ def main():
     for x in range(len(args['dataset']['datasetProbabilityVal'])):
         args['dataset']['datasetProbabilityVal'][x] = 0.0
 
-    for sessIdx in range(4,19):
+    for sessIdx in range(4, 19):
         args['dataset']['datasetProbabilityVal'][sessIdx] = 1.0
         args['dataset']['dataDir'][sessIdx] = paths.PATH_DERIVED_TFRECORDS
     args['testDir'] = 'test'
@@ -147,15 +148,15 @@ def main():
     # Let's load some example data from a single session and compute gradients of the output phone probabilities with
     # respect to the input channels:
     datasetIdx = -2
-    dataset   = list(nsd.tfValDatasets[datasetIdx])[0]
-    layerIdx  = nsd.args['dataset']['datasetToLayerMap'][datasetIdx]
+    dataset = list(nsd.tfValDatasets[datasetIdx])[0]
+    layerIdx = nsd.args['dataset']['datasetToLayerMap'][datasetIdx]
     gradients = list()
     for idx in range(dataset['inputFeatures'].shape[0]):
-        data      = dataset['inputFeatures'][idx, :dataset['nTimeSteps'][idx], :]
-        getter    = GradientGetter(nsd, data)
+        data = dataset['inputFeatures'][idx, :dataset['nTimeSteps'][idx], :]
+        getter = GradientGetter(nsd, data)
         gradients.extend(getter())
 
-        print(idx+1, '/', dataset['inputFeatures'].shape[0])
+        print(idx + 1, '/', dataset['inputFeatures'].shape[0])
 
 
 if __name__ == '__main__':
