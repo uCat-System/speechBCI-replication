@@ -125,7 +125,7 @@ def create_optimizer(
             include_in_weight_decay=include_in_weight_decay,
         )
     else:
-        optimizer = tf.keras.optimizers.Adam(
+        optimizer = tf.keras.optimizers.legacy.Adam(
             learning_rate=lr_schedule, beta_1=adam_beta1, beta_2=adam_beta2, epsilon=adam_epsilon
         )
     # We return the optimizer and the LR scheduler in order to better track the

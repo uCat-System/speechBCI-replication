@@ -188,7 +188,7 @@ class NeuralSequenceDecoder(object):
                                                                              end_learning_rate=self.args['learnRateEnd'],
                                                                              power=self.args['learnRatePower'], cycle=False, name=None)
 
-        self.optimizer = tf.keras.optimizers.Adam(
+        self.optimizer = tf.keras.optimizers.legacy.Adam(
             beta_1=0.9, beta_2=0.999, epsilon=1e-01, learning_rate=learning_rate_fn)
 
     def _prepareForTraining(self):
